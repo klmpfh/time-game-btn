@@ -70,12 +70,14 @@ void setup() {
 }
 
 void displayValues(bool current){
-  unsigned int display_day = current ? current_days : highscore_days;
+  // current or highscore for display
+  int display_day = current ? current_days : highscore_days;
   byte display_hours = current ? current_hours : highscore_hours;
   byte display_minutes = current ? current_minutes : highscore_minutes;
   byte display_secounds = current ? current_secounds : highscore_secounds;
   byte display_deci_secounds = current ? current_deci_secounds : highscore_deci_secounds;
 
+  // blinking dott if we are over highscore
   const bool off_dott = overHighscore() ? ((millis() / 123) % 8 < 2) : false;
   
   /* Display a (hexadecimal) digit on a 7-Segment Display
@@ -93,6 +95,7 @@ void displayValues(bool current){
   //        d  h
   // ttttttt hh mmssx
 
+  // display in 4 ways ...
 
   if(display_day <= 0){
     // HHhmm.ss.x
@@ -119,7 +122,7 @@ void displayValues(bool current){
     lc.setDigit( 0, 7, (byte) ((display_day / 10) % 10), off_dott); // t 10
     return;
   }
-
+  
   if(display_day < 10000000){
     // TTTTTTTd
     lc.setChar(  0, 0, 'd', off_dott);
@@ -147,6 +150,7 @@ void displayValues(bool current){
 
 }
 
+// are we over the highscore?
 bool overHighscore(){
 
   if(current_days > highscore_days) return true;
@@ -167,6 +171,7 @@ bool overHighscore(){
   return false;
 }
 
+// serial printing for debug ...
 void printSerial(){
 
   Serial.print(current_days);
@@ -193,9 +198,12 @@ void printSerial(){
   Serial.println("");
 }
 
+
+
 void loop() {
 
-  printSerial();
+  // serial printing for debug
+  // printSerial();
 
   if(digitalRead(btn_pin)){
     // btn pressed
@@ -212,13 +220,15 @@ void loop() {
     analogWrite(btn_led, 255);
     analogWrite(13, 255);
 
+    // wait here till relese btn
     while(digitalRead(btn_pin)) delay(10);
 
+    // reset to 0
     current_days = 0;
     current_hours = 0;
     current_minutes = 0;
     current_secounds = 0;
-    current_deci_secounds = millis()/100%10;
+    current_deci_secounds = millis()/100%10; // don't ask ...
     displayValues(true);
     
   }else{
@@ -255,7 +265,7 @@ void loop() {
     }
     
 
-    // btn LED
+    // btn LED - some funny blinking stuff
     if(overHighscore()){
       analogWrite(btn_led, map(millis()%320,0,320,0,255));
       analogWrite(13, map(millis()%320,0,320,0,255));
