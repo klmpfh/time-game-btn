@@ -2,42 +2,49 @@
 #include <EEPROM.h>
 #include "LedControl.h"
 
-/* Create a new LedControl variable.
- * We use pins 12,11 and 10 on the Arduino for the SPI interface
- * Pin 12 is connected to the DATA IN-pin of the first MAX7221
- * Pin 11 is connected to the CLK-pin of the first MAX7221
- * Pin 10 is connected to the LOAD(/CS)-pin of the first MAX7221
- * There will only be a single MAX7221 attached to the arduino 
+/* LedControl:
+ * Pin 12: DATA IN-pin
+ * Pin 11: CLK-pin
+ * Pin 10: LOAD(/CS)-pin
+ * (last param: count of devices)
  */  
 LedControl lc = LedControl(12,11,10,1);
 
+// current time value
 int current_days = 0; // 2 byte
 byte current_hours = 0; // 1 byte
 byte current_minutes = 0; // 1 byte
 byte current_secounds = 0; // 1 byte
 byte current_deci_secounds = 0; // 1 byte
 
-unsigned int highscore_days = 0; // 2 byte
+// highscore time value
+int highscore_days = 0; // 2 byte
 byte highscore_hours = 0; // 1 byte
 byte highscore_minutes = 0; // 1 byte
 byte highscore_secounds = 0; // 1 byte
 byte highscore_deci_secounds = 0; // 1 byte
 
+// btn pin
 #define btn_pin 4  // pull down needed TODO
-#define btn_led 6 // PWM: 3, 5, 6, 9, 10, 11
 
-// https://polluxlabs.net/arduino-tutorials/eine-7-segment-anzeige-am-arduino-anschliessen-und-verwenden/
+// led pin (extern)
+#define btn_led 6 // PWM: 3, 5, 6, 9, 10, 11
 
 void setup() {
 
   Serial.begin(9600);
 
-  // reset storeage on first flash
-  // reset_highscore(); // remove this on secound flash!
+  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  // !!  reset storeage on first flash  !!
+  // !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  reset_highscore(); // remove this on secound flash!
   
+  // display turn power save mode off
   lc.shutdown(0,false);
+  // set brightness low low low low ... ^^
   lc.setIntensity(0,1);
 
+  // startup test pattern
   lc.setChar( 0, 0, '8', true);
   lc.setChar( 0, 1, '8', true);
   lc.setChar( 0, 2, '8', true);
@@ -47,14 +54,18 @@ void setup() {
   lc.setChar( 0, 6, '8', true);
   lc.setChar( 0, 7, '8', true);
   
+  // pin modes ...
   pinMode(btn_pin, INPUT);
   pinMode(btn_led, OUTPUT);
-  pinMode(13, OUTPUT);
+  pinMode(13, OUTPUT); // arduino on board LED
   
+  // load highsocre from EEPROM
   load_higscore();
 
+  // displaytime and wait a second before running
   delay(1500);
-
+  
+  // clear dispaly ...
   lc.clearDisplay(0);
 }
 
