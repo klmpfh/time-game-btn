@@ -24,7 +24,8 @@ byte highscore_minutes = 0; // 1 byte
 byte highscore_secounds = 0; // 1 byte
 byte highscore_deci_secounds = 0; // 1 byte
 
-// btn pin
+int intensity = 1; // (0-15)
+
 #define btn_pin 4  // pull down needed TODO
 
 // led pin (extern)
@@ -41,8 +42,7 @@ void setup() {
   
   // display turn power save mode off
   lc.shutdown(0,false);
-  // set brightness low low low low ... ^^
-  lc.setIntensity(0,1);
+  lc.setIntensity(0,intensity); // (0-15)
 
   // startup test pattern
   lc.setChar( 0, 0, '8', true);
@@ -79,6 +79,8 @@ void displayValues(bool current){
 
   // blinking dott if we are over highscore
   const bool off_dott = overHighscore() ? ((millis() / 123) % 8 < 2) : false;
+
+  const bool last_dott = off_dott || display_deci_secounds == 0;
   
   /* Display a (hexadecimal) digit on a 7-Segment Display
    * Params:
@@ -99,7 +101,7 @@ void displayValues(bool current){
 
   if(display_day <= 0){
     // HHhmm.ss.x
-    lc.setDigit( 0, 0, (byte) (display_deci_secounds % 10), off_dott);
+    lc.setDigit( 0, 0, (byte) (display_deci_secounds % 10), last_dott);
     lc.setDigit( 0, 1, (byte) (display_secounds % 10), true); // s 1
     lc.setDigit( 0, 2, (byte) ((display_secounds / 10) % 10), off_dott); // s 10
     lc.setDigit( 0, 3, (byte) (display_minutes % 10), true); // m 1
@@ -112,7 +114,7 @@ void displayValues(bool current){
 
   if(display_day < 100){
     // TTdHHhmm
-    lc.setDigit( 0, 0, (byte) (display_minutes % 10), off_dott); // m 1
+    lc.setDigit( 0, 0, (byte) (display_minutes % 10), last_dott); // m 1
     lc.setDigit( 0, 1, (byte) ((display_minutes / 10) % 10), off_dott); // m 10
     lc.setChar(  0, 2, 'h', off_dott);
     lc.setDigit( 0, 3, (byte) (display_hours % 10), off_dott); // h 1
@@ -126,7 +128,7 @@ void displayValues(bool current){
   if(display_day < 10000000){
     // TTTTTTTd
     lc.setChar(  0, 0, 'd', off_dott);
-    lc.setDigit( 0, 1, (byte) (display_day % 10), off_dott); // t 1
+    lc.setDigit( 0, 1, (byte) (display_day % 10), last_dott); // t 1
     lc.setDigit( 0, 2, (byte) ((display_day / 10) % 10), off_dott); // t 10
     lc.setDigit( 0, 3, (byte) ((display_day / 100) % 10), off_dott); // t 100
     lc.setDigit( 0, 4, (byte) ((display_day / 1000) % 10), off_dott); // t 1000
@@ -138,7 +140,7 @@ void displayValues(bool current){
 
   
   // TTTTTTTT
-  lc.setDigit( 0, 0, (byte) (display_day % 10), off_dott); // t 1
+  lc.setDigit( 0, 0, (byte) (display_day % 10), last_dott); // t 1
   lc.setDigit( 0, 1, (byte) ((display_day / 10) % 10), off_dott); // t 10
   lc.setDigit( 0, 2, (byte) ((display_day / 100) % 10), off_dott); // t 100
   lc.setDigit( 0, 3, (byte) ((display_day / 1000) % 10), off_dott); // t 1000
@@ -204,6 +206,8 @@ void loop() {
 
   // serial printing for debug
   // printSerial();
+  
+  lc.setIntensity(0,intensity);
 
   if(digitalRead(btn_pin)){
     // btn pressed
@@ -219,7 +223,8 @@ void loop() {
     // btn led on
     analogWrite(btn_led, 255);
     analogWrite(13, 255);
-
+    lc.setIntensity(0,1);
+    
     // wait here till relese btn
     while(digitalRead(btn_pin)) delay(10);
 
@@ -263,14 +268,14 @@ void loop() {
       displayValues(true);
       
     }
-    
 
     // btn LED - some funny blinking stuff
     if(overHighscore()){
       analogWrite(btn_led, map(millis()%320,0,320,0,255));
       analogWrite(13, map(millis()%320,0,320,0,255));
+      intensity = current_secounds == 0 ? map(current_deci_secounds, 0,9,15,1) : 1; // (0-15)
     }else{
-      
+      intensity = 1; // (0-15)
       analogWrite(btn_led, map(millis()%4321,0,4320,0,255));
       analogWrite(13, map(millis()%4321,0,4320,0,255));
     }
