@@ -78,9 +78,9 @@ void displayValues(bool current){
   byte display_deci_secounds = current ? current_deci_secounds : highscore_deci_secounds;
 
   // blinking dott if we are over highscore
-  const bool off_dott = overHighscore() ? ((millis() / 123) % 8 < 2) : false;
+  const bool off_dott = overHighscore() ? (current_deci_secounds < 2) : false;
 
-  const bool last_dott = off_dott || display_deci_secounds == 0;
+  const bool last_dott = off_dott || (display_deci_secounds == 0 || current_deci_secounds == 5);
   
   /* Display a (hexadecimal) digit on a 7-Segment Display
    * Params:
@@ -271,13 +271,13 @@ void loop() {
 
     // btn LED - some funny blinking stuff
     if(overHighscore()){
-      analogWrite(btn_led, map(millis()%320,0,320,0,255));
-      analogWrite(13, map(millis()%320,0,320,0,255));
-      intensity = current_secounds == 0 ? map(current_deci_secounds, 0,9,15,1) : 1; // (0-15)
+      analogWrite(btn_led, map(current_deci_secounds*30,0,9*30,0,255));
+      analogWrite(13, map(current_deci_secounds*30,0,9*30,0,255));
+      intensity = current_secounds%10 == 0 ? map(current_deci_secounds, 0,9,15,1) : 1; // (0-15)
     }else{
       intensity = 1; // (0-15)
-      analogWrite(btn_led, map(millis()%4321,0,4320,0,255));
-      analogWrite(13, map(millis()%4321,0,4320,0,255));
+      analogWrite(btn_led, map(current_deci_secounds*400,0,9*400,0,255));
+      analogWrite(13, map(current_deci_secounds*400,0,9*400,0,255));
     }
     
   }
