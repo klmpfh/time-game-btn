@@ -3,13 +3,13 @@
 
 
 // Constants
-#define MAGIC_NUMBER 137
+#define MAGIC_NUMBER 138
 #define BTN_PIN 4  // pull down needed TODO
 // led pin (extern)
-#define BTN_LED 6 // PWM: 3, 5, 6, 9, 10, 11
+#define BTN_LED 6  // PWM: 3, 5, 6, 9, 10, 11
 #define BUILTIN_LED 13
 
-#define OVERWRITE 0 // initial
+#define OVERWRITE 0  // initial
 // #define OVERWRITE  4376773 // P13
 // #define OVERWRITE 12479708 // CBurg
 
@@ -23,52 +23,52 @@
 */
 LedControl lc = LedControl(12, 11, 10, 1);
 
-byte intensity = 1; // (0-15)
+byte intensity = 1;  // (0-15)
 
-unsigned long tickCount = 0;
+unsigned long tickCount = 0;  // new with magic number 138: MINUTES
 unsigned long currentHighscore = 0;
 unsigned long currentValue = 0;
 
-unsigned long lastTick = 100;
+unsigned long lastTick = 0;
 
-void writeULongIntoEEPROM(int address, unsigned long number)
-{
+void writeULongIntoEEPROM(int address, unsigned long number) {
   EEPROM.write(address, number & 0xFF);
   EEPROM.write(address + 1, (number >> 8) & 0xFF);
   EEPROM.write(address + 2, (number >> 16) & 0xFF);
   EEPROM.write(address + 3, (number >> 24) & 0xFF);
 }
 
-unsigned long readULongFromEEPROM(int address)
-{
-  long byte1 = (long) EEPROM.read(address);
-  long byte2 = (long) EEPROM.read(address + 1);
-  long byte3 = (long) EEPROM.read(address + 2);
-  long byte4 = (long) EEPROM.read(address + 3);
+unsigned long readULongFromEEPROM(int address) {
+  long byte1 = (long)EEPROM.read(address);
+  long byte2 = (long)EEPROM.read(address + 1);
+  long byte3 = (long)EEPROM.read(address + 2);
+  long byte4 = (long)EEPROM.read(address + 3);
   return byte1 + (byte2 << 8) + (byte3 << 16) + (byte4 << 24);
 }
 
-void store()
-{
+void store() {
   writeULongIntoEEPROM(1, currentValue);
 }
 
-void load()
-{
+void load() {
   currentHighscore = readULongFromEEPROM(1);
 }
 
 void valueOnScreen(unsigned long value) {
 
+  unsigned long minutes = value % 60;
+  unsigned long hours = (value / 60) % 24;
+  unsigned long days = ((value / 69) / 24);
+
   const byte digits[8] = {
-    (value / 1) % 10,
-    (value / 10) % 10,
-    (value / 100) % 10,
-    (value / 1000) % 10,
-    (value / 10000) % 10,
-    (value / 100000) % 10,
-    (value / 1000000) % 10,
-    (value / 10000000) % 10
+    (days / 1000) % 10,   // 7, t1000
+    (days / 100) % 10,    // 6, t100
+    (days / 10) % 10,     // 5, t10
+    (days / 1) % 10,      // 4, t1
+    (hours / 10) % 10,    // 3, h10
+    (hours / 10) % 10,    // 2, h1
+    (minutes / 10) % 10,  // 1, m10
+    (minutes / 1) % 10    // 0, m1
   };
 
   // 76.543.210
@@ -83,13 +83,17 @@ void valueOnScreen(unsigned long value) {
   // void setDigit(int addr, int digit, byte value, boolean dp);
   // https://wayoda.github.io/LedControl/pages/software#7Seg
 
-  for (byte i = 0 ; i < 8 ; i++) lc.setDigit(0, i, digits[i], i == 6 || i == 3);
+  unsigned int last_dot_on_time = map((millis() / 1000) % 60, 0, 60, 0, 999);
 
+
+  for (byte i = 0; i < 8; i++) lc.setDigit(0, 7 - i, digits[i], i == 5 || i == 3 || (i == 7 && (millis() % 1000 < last_dot_on_time)));
+
+  // tttt.hh.mm
+  // 0123 45 67
 }
 
 
 void setup() {
-  Serial.begin(9600);
 
   // reset storage on first flash
   byte virgin = EEPROM.read(0);
@@ -101,25 +105,23 @@ void setup() {
   if (OVERWRITE) {
     currentValue = OVERWRITE;
     store();
-    Serial.println(currentValue);
-    Serial.println("done.");
     while (1) delay(100);
   }
 
 
   // display turn power save mode off
   lc.shutdown(0, false);
-  lc.setIntensity(0, intensity); // (0-15)
+  lc.setIntensity(0, intensity);  // (0-15)
 
   // startup test pattern
   for (byte i; i < 8; i++) {
-    lc.setChar( 0, i, '8', true);
+    lc.setChar(0, i, '8', true);
   }
 
   // pin modes ...
   pinMode(BTN_PIN, INPUT);
   pinMode(BTN_LED, OUTPUT);
-  pinMode(BUILTIN_LED, OUTPUT); // arduino on board LED
+  pinMode(BUILTIN_LED, OUTPUT);  // arduino on board LED
 
   // load highsocre from EEPROM
   load();
@@ -135,9 +137,8 @@ void setup() {
 
 void loop() {
 
-
   // end of world
-  if (currentValue == 99999999 || currentHighscore == 99999999) {
+  if (currentValue >= 14400000 || currentHighscore >= 14400000) {
     // reset
     currentValue = 0;
     currentHighscore = 0;
@@ -145,21 +146,22 @@ void loop() {
     // startup test pattern
     byte r = random(0, 9);
     for (byte i; i < 8; i++) {
-      lc.setDigit( 0, i, r, true);
+      lc.setDigit(0, i, r, true);
     }
     lc.setIntensity(0, 1);
-    while (1) delay(100); // freeze
+    while (1) delay(100);  // freeze
   }
 
 
   // do on tick
-  const unsigned long currentTick = millis() / 317;
+  const unsigned long currentTick = millis() / 60000;
   if (lastTick != currentTick) {
     // it's time
     lastTick = currentTick;
 
     currentValue++;
   }
+
 
   // do on every loop
   lc.setIntensity(0, intensity);
@@ -173,21 +175,19 @@ void loop() {
     }
     currentValue = 0;
     valueOnScreen(currentHighscore);
-    Serial.println(currentHighscore);
     intensity = 1;
     analogWrite(BUILTIN_LED, 255);
     analogWrite(BTN_LED, 255);
   } else {
     valueOnScreen(currentValue);
-    Serial.println(currentValue);
     if (currentValue > currentHighscore) {
-      intensity = map(((millis() % 317)), 0 , 316, 1, 16);
-      analogWrite(BTN_LED, map(((millis() % 317)), 0 , 316, 0, 255));
+      intensity = map(((millis() % 317)), 0, 316, 1, 16);
+      analogWrite(BTN_LED, map(((millis() % 317)), 0, 316, 0, 255));
     } else {
       intensity = 1;
       analogWrite(BTN_LED, 255);
     }
     analogWrite(BUILTIN_LED, 0);
   }
-  delay(20);
+  delay(1000 / 120);
 }
